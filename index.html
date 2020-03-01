@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Snakey</title>
+    <meta name="viewport" content="user-scalable=no" />
+</head>
+
+<body>
+
+    <svg id="canvas"
+        style="touch-action: manipulation; position: absolute; left: 0; top: 0; font-family: 'Lucida Console', Monaco, monospace;"
+        onload="handleLoad()" onresize="fitToScreen()" onclick="handleMouseClick(event)">
+        <rect id="background" x="0" y="0" width="1" height="1" fill="white" />
+        <text id="messageTextbox" dominant-baseline="middle" text-anchor="middle" x="50%" y="10%" font-size="16">Tap to
+            start</text>
+        <circle id="snakeHead" cx="50%" cy="50%" r="20" fill="green" />
+    </svg>
+
+    <script>
+        const FPS = 24;
+        const STEP_DISTANCE = 2;
+        var clickX, clickY;
+        var gameStarted = false;
+
+        function handleLoad() {
+            fitToScreen();
+            const snakeHead = document.getElementById('snakeHead');
+            snakeHead.setAttribute('cx', window.innerWidth / 2);
+            snakeHead.setAttribute('cy', window.innerHeight / 2);
+        }
+
+        function fitToScreen() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            const canvas = document.getElementById('canvas');
+            canvas.setAttribute('width', width);
+            canvas.setAttribute('height', height);
+
+            const background = document.getElementById('background');
+            background.setAttribute('width', width);
+            background.setAttribute('height', height);
+        }
+
+        function handleMouseClick(event) {
+            removeMessage();
+            clickX = event.clientX;
+            clickY = event.clientY;
+            if (!gameStarted) {
+                startGame();
+            }
+        }
+
+        function removeMessage() {
+            messageTextbox = document.getElementById("messageTextbox");
+            messageTextbox.textContent = "";
+        }
+
+        async function startGame() {
+            gameStarted = true;
+            while (gameStarted) {
+                await sleep(Math.floor(1000 / FPS));
+                moveSnake();
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function moveSnake() {
+            const head = document.getElementById("snakeHead");
+            movePart(head);
+        }
+
+        function movePart(part) {
+            const x = Number(part.getAttribute('cx'));
+            const y = Number(part.getAttribute('cy'));
+            const deltaX = x - clickX;
+            const deltaY = y - clickY;
+            const angle = Math.atan(deltaY / deltaX);
+            const newDeltaX = Math.cos(angle) * STEP_DISTANCE;
+            const newDeltaY = Math.sin(angle) * STEP_DISTANCE;
+            const newX = (clickX >= x) ? x + newDeltaX : x - newDeltaX;
+            const newY = (clickX >= x) ? y + newDeltaY : y - newDeltaY;
+
+            part.setAttribute('cx', newX);
+            part.setAttribute('cy', newY);
+        }
+    </script>
+
+</body>
+
+</html>
