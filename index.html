@@ -20,7 +20,7 @@
     <script>
         const FPS = 24;
         const STEP_DISTANCE = 2;
-        var clickX, clickY;
+        var velocityX, velocityY;
         var gameStarted = false;
 
         function handleLoad() {
@@ -45,8 +45,9 @@
 
         function handleMouseClick(event) {
             removeMessage();
-            clickX = event.clientX;
-            clickY = event.clientY;
+            const clickX = event.clientX;
+            const clickY = event.clientY;
+            setVelocity(clickX, clickY);
             if (!gameStarted) {
                 startGame();
             }
@@ -55,6 +56,19 @@
         function removeMessage() {
             messageTextbox = document.getElementById("messageTextbox");
             messageTextbox.textContent = "";
+        }
+
+        function setVelocity(clickX, clickY) {
+            const snakeHead = document.getElementById('snakeHead');
+            const x = Number(snakeHead.getAttribute('cx'));
+            const y = Number(snakeHead.getAttribute('cy'));
+            const displacementX = x - clickX;
+            const displacementY = y - clickY;
+            const angle = Math.atan(displacementY / displacementX);
+            const speedX = Math.cos(angle) * STEP_DISTANCE;
+            const speedY = Math.sin(angle) * STEP_DISTANCE;
+            velocityX = (clickX >= x) ? speedX : -speedX;
+            velocityY = (clickX >= x) ? speedY : -speedY;
         }
 
         async function startGame() {
@@ -77,13 +91,8 @@
         function movePart(part) {
             const x = Number(part.getAttribute('cx'));
             const y = Number(part.getAttribute('cy'));
-            const deltaX = x - clickX;
-            const deltaY = y - clickY;
-            const angle = Math.atan(deltaY / deltaX);
-            const newDeltaX = Math.cos(angle) * STEP_DISTANCE;
-            const newDeltaY = Math.sin(angle) * STEP_DISTANCE;
-            const newX = (clickX >= x) ? x + newDeltaX : x - newDeltaX;
-            const newY = (clickX >= x) ? y + newDeltaY : y - newDeltaY;
+            const newX = x + velocityX;
+            const newY = y + velocityY;
 
             part.setAttribute('cx', newX);
             part.setAttribute('cy', newY);
