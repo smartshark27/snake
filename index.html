@@ -15,13 +15,16 @@
         <text id="messageTextbox" dominant-baseline="middle" text-anchor="middle" x="50%" y="10%" font-size="16">Tap to
             start</text>
         <circle id="snakeHead" cx="50%" cy="50%" r="20" fill="green" />
+        <circle id="snakeBody1" cx="200" cy="200" r="20" fill="orange" />
     </svg>
 
     <script>
         const FPS = 24;
         const STEP_DISTANCE = 2;
-        var velocityX, velocityY;
+
         var gameStarted = false;
+        var snakeBodyPartIDs = ["snakeBody1"];
+        var snakeHeadVelocityX, snakeHeadVelocityY;
 
         function handleLoad() {
             fitToScreen();
@@ -47,7 +50,8 @@
             removeMessage();
             const clickX = event.clientX;
             const clickY = event.clientY;
-            setVelocity(clickX, clickY);
+            snakeHead = document.getElementById('snakeHead');
+            [snakeHeadVelocityX, snakeHeadVelocityY] = calculateVelocity(snakeHead, clickX, clickY);
             if (!gameStarted) {
                 startGame();
             }
@@ -58,17 +62,22 @@
             messageTextbox.textContent = "";
         }
 
-        function setVelocity(clickX, clickY) {
-            const snakeHead = document.getElementById('snakeHead');
-            const x = Number(snakeHead.getAttribute('cx'));
-            const y = Number(snakeHead.getAttribute('cy'));
-            const displacementX = x - clickX;
-            const displacementY = y - clickY;
+        function calculateVelocity(object, targetX, targetY) {
+            const [x, y] = getPosition(object);
+            const displacementX = x - targetX;
+            const displacementY = y - targetY;
             const angle = Math.atan(displacementY / displacementX);
             const speedX = Math.cos(angle) * STEP_DISTANCE;
             const speedY = Math.sin(angle) * STEP_DISTANCE;
-            velocityX = (clickX >= x) ? speedX : -speedX;
-            velocityY = (clickX >= x) ? speedY : -speedY;
+            const velocityX = (targetX >= x) ? speedX : -speedX
+            const velocityY = (targetX >= x) ? speedY : -speedY
+            return [velocityX, velocityY];
+        }
+
+        function getPosition(object) {
+            const x = Number(object.getAttribute('cx'));
+            const y = Number(object.getAttribute('cy'));
+            return [x, y];
         }
 
         async function startGame() {
@@ -84,13 +93,19 @@
         }
 
         function moveSnake() {
-            const head = document.getElementById("snakeHead");
-            movePart(head);
+            var part = document.getElementById('snakeHead');
+            moveSnakePart(part, snakeHeadVelocityX, snakeHeadVelocityY);
+            var [targetX, targetY] = getPosition(part);
+            for (id of snakeBodyPartIDs) {
+                const part = document.getElementById(id);
+                const [velocityX, velocityY] = calculateVelocity(part, targetX, targetY);
+                moveSnakePart(part, velocityX, velocityY);
+                [targetX, targetY] = getPosition(part);
+            }
         }
 
-        function movePart(part) {
-            const x = Number(part.getAttribute('cx'));
-            const y = Number(part.getAttribute('cy'));
+        function moveSnakePart(part, velocityX, velocityY) {
+            const [x, y] = getPosition(part);
             const newX = x + velocityX;
             const newY = y + velocityY;
 
