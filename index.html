@@ -22,9 +22,11 @@
         const FPS = 24;
         const STEP_DISTANCE = 2;
 
-        var gameStarted = false;
-        var snakeBodyPartIDs = ["snakeBody1"];
-        var snakeHeadVelocityX, snakeHeadVelocityY;
+        var gameRunning = false;
+        const snakePartIDs = ["snakeHead", "snakeBody1"];
+        var snakePartsAreMoving = [false, false];
+        const snakePartTargets = [];
+        const snakePartTargetIndexes = [0, 0];
 
         function handleLoad() {
             fitToScreen();
@@ -48,11 +50,12 @@
 
         function handleMouseClick(event) {
             removeMessage();
-            const clickX = event.clientX;
-            const clickY = event.clientY;
-            snakeHead = document.getElementById('snakeHead');
-            [snakeHeadVelocityX, snakeHeadVelocityY] = calculateVelocity(snakeHead, clickX, clickY);
-            if (!gameStarted) {
+            snakePartTargets.push({
+                x: event.clientX,
+                y: event.clientY,
+            });
+            setAllSnakesToMove();
+            if (!gameRunning) {
                 startGame();
             }
         }
@@ -62,27 +65,13 @@
             messageTextbox.textContent = "";
         }
 
-        function calculateVelocity(object, targetX, targetY) {
-            const [x, y] = getPosition(object);
-            const displacementX = x - targetX;
-            const displacementY = y - targetY;
-            const angle = Math.atan(displacementY / displacementX);
-            const speedX = Math.cos(angle) * STEP_DISTANCE;
-            const speedY = Math.sin(angle) * STEP_DISTANCE;
-            const velocityX = (targetX >= x) ? speedX : -speedX
-            const velocityY = (targetX >= x) ? speedY : -speedY
-            return [velocityX, velocityY];
-        }
-
-        function getPosition(object) {
-            const x = Number(object.getAttribute('cx'));
-            const y = Number(object.getAttribute('cy'));
-            return [x, y];
+        function setAllSnakesToMove() {
+            snakePartsAreMoving = snakePartsAreMoving.map(isMoving => true);
         }
 
         async function startGame() {
-            gameStarted = true;
-            while (gameStarted) {
+            gameRunning = true;
+            while (gameRunning) {
                 await sleep(Math.floor(1000 / FPS));
                 moveSnake();
             }
@@ -93,24 +82,77 @@
         }
 
         function moveSnake() {
-            var part = document.getElementById('snakeHead');
-            moveSnakePart(part, snakeHeadVelocityX, snakeHeadVelocityY);
-            var [targetX, targetY] = getPosition(part);
-            for (id of snakeBodyPartIDs) {
-                const part = document.getElementById(id);
-                const [velocityX, velocityY] = calculateVelocity(part, targetX, targetY);
-                moveSnakePart(part, velocityX, velocityY);
-                [targetX, targetY] = getPosition(part);
+            snakeStopped = false;
+            for (var i = 0; i < snakePartIDs.length; i++) {
+                if (snakeStopped) {
+                    snakePartsAreMoving[i] = false;
+                    continue;
+                }
+                if (hasReachedTarget(i)) {
+                    if (!hasNextTarget(i)) {
+                        snakeStopped = true;
+                        snakePartsAreMoving[i] = false;
+                        continue;
+                    }
+                    updateTarget(i);
+                }
+                movePart(i);
             }
         }
 
-        function moveSnakePart(part, velocityX, velocityY) {
+        function hasReachedTarget(snakePartIndex) {
+            const targetIndex = snakePartTargetIndexes[snakePartIndex];
+            if (targetIndex < 0) return true;
+            const target = snakePartTargets[targetIndex];
+
+            const partID = snakePartIDs[snakePartIndex];
+            const part = document.getElementById(partID);
+            const [partX, partY] = getPosition(part);
+
+            return target.x >= partX - STEP_DISTANCE / 2 &&
+                target.x <= partX + STEP_DISTANCE / 2 &&
+                target.y >= partY - STEP_DISTANCE / 2 &&
+                target.y <= partY + STEP_DISTANCE / 2;
+        }
+
+        function getPosition(object) {
+            const x = Number(object.getAttribute('cx'));
+            const y = Number(object.getAttribute('cy'));
+            return [x, y];
+        }
+
+        function hasNextTarget(snakePartIndex) {
+            return snakePartTargetIndexes[snakePartIndex] + 1 < snakePartTargets.length;
+        }
+
+        function updateTarget(snakePartIndex) {
+            snakePartTargetIndexes[snakePartIndex]++;
+        }
+
+        function movePart(snakePartIndex) {
+            const id = snakePartIDs[snakePartIndex];
+            const part = document.getElementById(id);
             const [x, y] = getPosition(part);
+
+            const targetIndex = snakePartTargetIndexes[snakePartIndex];
+            const target = snakePartTargets[targetIndex];
+
+            const [velocityX, velocityY] = calculateVelocity(x, y, target.x, target.y);
             const newX = x + velocityX;
             const newY = y + velocityY;
-
             part.setAttribute('cx', newX);
             part.setAttribute('cy', newY);
+        }
+
+        function calculateVelocity(x, y, targetX, targetY) {
+            const displacementX = x - targetX;
+            const displacementY = y - targetY;
+            const angle = Math.atan(displacementY / displacementX);
+            const speedX = Math.cos(angle) * STEP_DISTANCE;
+            const speedY = Math.sin(angle) * STEP_DISTANCE;
+            const velocityX = (targetX >= x) ? speedX : -speedX
+            const velocityY = (targetX >= x) ? speedY : -speedY
+            return [velocityX, velocityY];
         }
     </script>
 
