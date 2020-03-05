@@ -1,172 +1,233 @@
 <!DOCTYPE html>
 <html>
-
-<head>
+  <head>
     <title>Snakey</title>
     <meta name="viewport" content="user-scalable=no" />
-</head>
+  </head>
 
-<body>
-
-    <svg id="canvas"
-        style="touch-action: manipulation; position: absolute; left: 0; top: 0; font-family: 'Lucida Console', Monaco, monospace;"
-        onload="handleLoad()" onresize="fitToScreen()" onclick="handleMouseClick(event)">
-        <rect id="background" x="0" y="0" width="1" height="1" fill="white" />
-        <text id="messageTextbox" dominant-baseline="middle" text-anchor="middle" x="50%" y="10%" font-size="16">Tap to
-            start</text>
-        <circle id="snakeHead" cx="330" cy="50" r="20" fill="green" />
-        <circle id="snakeBody1" cx="290" cy="50" r="20" fill="green" />
-        <circle id="snakeBody2" cx="250" cy="50" r="20" fill="green" />
-        <circle id="snakeBody3" cx="210" cy="50" r="20" fill="green" />
-        <circle id="snakeBody4" cx="170" cy="50" r="20" fill="green" />
-        <circle id="snakeBody5" cx="130" cy="50" r="20" fill="green" />
-        <circle id="snakeBody6" cx="90" cy="50" r="20" fill="green" />
-        <circle id="snakeBody7" cx="50" cy="50" r="20" fill="green" />
+  <body>
+    <svg
+      id="canvas"
+      style="touch-action: manipulation; position: absolute; left: 0; top: 0; font-family: 'Lucida Console', Monaco, monospace;"
+      onload="handleLoad()"
+      onresize="fitToScreen()"
+    >
+      <rect id="background" x="0" y="0" width="1" height="1" fill="white" onclick="handleMouseClick(event)"></rect>
+      <text
+        id="messageTextbox"
+        dominant-baseline="middle"
+        text-anchor="middle"
+        x="50%"
+        y="10%"
+        font-size="16"
+      >
+        Tap to start
+      </text>
     </svg>
 
     <script>
-        const FPS = 60;
-        const STEP_DISTANCE = 2;
+      const FPS = 60;
+      const STEP_DISTANCE = 3;
+      const PART_RADIUS = 20;
+      const SNAKE_FILL = "green";
+      const SNAKE_START_LENGTH = 8;
+      const SNAKE_START_POS_X = 50;
+      const SNAKE_START_POS_Y = 50;
 
-        var gameRunning = false;
-        const snakePartIDs = ["snakeHead", "snakeBody1", "snakeBody2", "snakeBody3",
-            "snakeBody4", "snakeBody5", "snakeBody6", "snakeBody7"];
-        var snakePartsAreMoving = [false, false, false, false, false, false, false, false];
-        const snakePartTargets = [];
-        const snakePartTargetIndexes = [0, 0, 0, 0, 0, 0, 0, 0];
+      var nextPartID = 0;
+      const partIDs = [];
+      var partIsMoving = [];
+      const targets = [];
+      const partTargetIndexes = [];
+      var started = false;
 
-        function handleLoad() {
-            fitToScreen();
-            const snakeHead = document.getElementById('snakeHead');
-            const [x, y] = getPosition(snakeHead);
+      function handleLoad() {
+        fitToScreen();
+        spawnSnake();
+      }
 
-            snakePartTargets.push({
-                x: x,
-                y: y,
-            });
+      function spawnSnake() {
+        for (var i = 0; i < SNAKE_START_LENGTH; i++) {
+          const x = SNAKE_START_POS_X + i * 2 * PART_RADIUS;
+          spawnPart(x, SNAKE_START_POS_Y);
         }
+        const head = getHead();
+        const [x, y] = getPosition(head);
+        addTarget(x, y);
+      }
 
-        function fitToScreen() {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
+      function spawnPart(x, y) {
+        const part = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "circle"
+        );
+        const id = getNextPartID();
 
-            const canvas = document.getElementById('canvas');
-            canvas.setAttribute('width', width);
-            canvas.setAttribute('height', height);
+        part.setAttribute("id", id);
+        part.setAttribute("cx", x);
+        part.setAttribute("cy", y);
+        part.setAttribute("r", PART_RADIUS);
+        part.setAttribute("fill", SNAKE_FILL);
+        document.getElementById("canvas").appendChild(part);
 
-            const background = document.getElementById('background');
-            background.setAttribute('width', width);
-            background.setAttribute('height', height);
+        partIDs.push(id);
+        partIsMoving.push(false);
+        partTargetIndexes.push(0);
+      }
+
+      function getNextPartID() {
+        const id = "part" + nextPartID.toString();
+        nextPartID++;
+        return id;
+      }
+
+      function getHead() {
+        return document.getElementById("part0");
+      }
+
+      function addTarget(x, y) {
+        targets.push({
+          x: x,
+          y: y
+        });
+      }
+
+      function fitToScreen() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        const canvas = document.getElementById("canvas");
+        canvas.setAttribute("width", width);
+        canvas.setAttribute("height", height);
+
+        const background = document.getElementById('background');
+        background.setAttribute('width', width);
+        background.setAttribute('height', height);
+      }
+
+      function getPosition(object) {
+        const x = Number(object.getAttribute("cx"));
+        const y = Number(object.getAttribute("cy"));
+        return [x, y];
+      }
+
+      function handleMouseClick(event) {
+        removeMessage();
+        const head = getHead();
+        const [headX, headY] = getPosition(head);
+        updateLastTarget(headX, headY);
+        addTarget(event.clientX, event.clientY);
+        setAllPartsMoving();
+        if (!started) {
+          start();
         }
+      }
 
-        function getPosition(object) {
-            const x = Number(object.getAttribute('cx'));
-            const y = Number(object.getAttribute('cy'));
-            return [x, y];
+      function removeMessage() {
+        messageTextbox = document.getElementById("messageTextbox");
+        messageTextbox.textContent = "";
+      }
+
+      function updateLastTarget(x, y) {
+        targets[targets.length - 1] = {
+          x: x,
+          y: y
+        };
+      }
+
+      function setAllPartsMoving() {
+        partIsMoving = partIsMoving.map(isMoving => true);
+      }
+
+      async function start() {
+        started = true;
+        while (started) {
+          await sleep(Math.floor(1000 / FPS));
+          moveSnake();
         }
+      }
 
-        function handleMouseClick(event) {
-            removeMessage();
-            snakePartTargets.push({
-                x: event.clientX,
-                y: event.clientY,
-            });
-            setAllSnakesToMove();
-            if (!gameRunning) {
-                startGame();
+      function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      function moveSnake() {
+        stopped = false;
+        for (var i = 0; i < partIDs.length; i++) {
+          if (stopped) {
+            stopMoving(i);
+            continue;
+          }
+          if (hasReachedTarget(i)) {
+            if (!hasNextTarget(i)) {
+              stopped = true;
+              stopMoving(i);
+              continue;
             }
+            updateTarget(i);
+          }
+          movePart(i);
         }
+      }
 
-        function removeMessage() {
-            messageTextbox = document.getElementById("messageTextbox");
-            messageTextbox.textContent = "";
-        }
+      function stopMoving(partIndex) {
+        partIsMoving[partIndex] = false;
+      }
 
-        function setAllSnakesToMove() {
-            snakePartsAreMoving = snakePartsAreMoving.map(isMoving => true);
-        }
+      function hasReachedTarget(partIndex) {
+        const targetIndex = partTargetIndexes[partIndex];
+        const target = targets[targetIndex];
 
-        async function startGame() {
-            gameRunning = true;
-            while (gameRunning) {
-                await sleep(Math.floor(1000 / FPS));
-                moveSnake();
-            }
-        }
+        const partID = partIDs[partIndex];
+        const part = document.getElementById(partID);
+        const [x, y] = getPosition(part);
 
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
+        return (
+          target.x >= x - STEP_DISTANCE / 2 &&
+          target.x <= x + STEP_DISTANCE / 2 &&
+          target.y >= y - STEP_DISTANCE / 2 &&
+          target.y <= y + STEP_DISTANCE / 2
+        );
+      }
 
-        function moveSnake() {
-            snakeStopped = false;
-            for (var i = 0; i < snakePartIDs.length; i++) {
-                if (snakeStopped) {
-                    snakePartsAreMoving[i] = false;
-                    continue;
-                }
-                if (hasReachedTarget(i)) {
-                    if (!hasNextTarget(i)) {
-                        snakeStopped = true;
-                        snakePartsAreMoving[i] = false;
-                        continue;
-                    }
-                    updateTarget(i);
-                }
-                movePart(i);
-            }
-        }
+      function hasNextTarget(partIndex) {
+        return partTargetIndexes[partIndex] + 1 < targets.length;
+      }
 
-        function hasReachedTarget(snakePartIndex) {
-            const targetIndex = snakePartTargetIndexes[snakePartIndex];
-            if (targetIndex < 0) return true;
-            const target = snakePartTargets[targetIndex];
+      function updateTarget(partIndex) {
+        partTargetIndexes[partIndex]++;
+      }
 
-            const partID = snakePartIDs[snakePartIndex];
-            const part = document.getElementById(partID);
-            const [partX, partY] = getPosition(part);
+      function movePart(partIndex) {
+        const id = partIDs[partIndex];
+        const part = document.getElementById(id);
+        const [x, y] = getPosition(part);
 
-            return target.x >= partX - STEP_DISTANCE / 2 &&
-                target.x <= partX + STEP_DISTANCE / 2 &&
-                target.y >= partY - STEP_DISTANCE / 2 &&
-                target.y <= partY + STEP_DISTANCE / 2;
-        }
+        const targetIndex = partTargetIndexes[partIndex];
+        const target = targets[targetIndex];
 
-        function hasNextTarget(snakePartIndex) {
-            return snakePartTargetIndexes[snakePartIndex] + 1 < snakePartTargets.length;
-        }
+        const [velocityX, velocityY] = calculateVelocity(
+          x,
+          y,
+          target.x,
+          target.y
+        );
+        const newX = x + velocityX;
+        const newY = y + velocityY;
+        part.setAttribute("cx", newX);
+        part.setAttribute("cy", newY);
+      }
 
-        function updateTarget(snakePartIndex) {
-            snakePartTargetIndexes[snakePartIndex]++;
-        }
-
-        function movePart(snakePartIndex) {
-            const id = snakePartIDs[snakePartIndex];
-            const part = document.getElementById(id);
-            const [x, y] = getPosition(part);
-
-            const targetIndex = snakePartTargetIndexes[snakePartIndex];
-            const target = snakePartTargets[targetIndex];
-
-            const [velocityX, velocityY] = calculateVelocity(x, y, target.x, target.y);
-            const newX = x + velocityX;
-            const newY = y + velocityY;
-            part.setAttribute('cx', newX);
-            part.setAttribute('cy', newY);
-        }
-
-        function calculateVelocity(x, y, targetX, targetY) {
-            const displacementX = x - targetX;
-            const displacementY = y - targetY;
-            const angle = Math.atan(displacementY / displacementX);
-            const speedX = Math.cos(angle) * STEP_DISTANCE;
-            const speedY = Math.sin(angle) * STEP_DISTANCE;
-            const velocityX = (targetX >= x) ? speedX : -speedX
-            const velocityY = (targetX >= x) ? speedY : -speedY
-            return [velocityX, velocityY];
-        }
+      function calculateVelocity(x, y, targetX, targetY) {
+        const displacementX = x - targetX;
+        const displacementY = y - targetY;
+        const angle = Math.atan(displacementY / displacementX);
+        const speedX = Math.cos(angle) * STEP_DISTANCE;
+        const speedY = Math.sin(angle) * STEP_DISTANCE;
+        const velocityX = targetX >= x ? speedX : -speedX;
+        const velocityY = targetX >= x ? speedY : -speedY;
+        return [velocityX, velocityY];
+      }
     </script>
-
-</body>
-
+  </body>
 </html>
