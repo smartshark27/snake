@@ -10,9 +10,16 @@
       id="canvas"
       style="touch-action: manipulation; position: absolute; left: 0; top: 0; font-family: 'Lucida Console', Monaco, monospace;"
       onload="handleLoad()"
-      onresize="fitToScreen()"
     >
-      <rect id="background" x="0" y="0" width="1" height="1" fill="white" onclick="handleMouseClick(event)"></rect>
+      <rect
+        id="background"
+        x="0"
+        y="0"
+        width="1"
+        height="1"
+        fill="white"
+        onclick="handleMouseClick(event)"
+      ></rect>
       <text
         id="messageTextbox"
         dominant-baseline="middle"
@@ -23,15 +30,23 @@
       >
         Tap the screen
       </text>
+      <circle
+        id="candy"
+        cx="-10"
+        cy="-10"
+        r="20"
+        fill="red"
+        display="none"
+        onclick="handleMouseClick(event)"
+      />
     </svg>
 
     <script>
       const FPS = 60;
       const STEP_DISTANCE = 3;
-      const PART_RADIUS = 20;
-      const PART_SEPARATION = 20;
+      const PART_RADIUS = 30;
       const SNAKE_FILL = "green";
-      const SNAKE_START_LENGTH = 100;
+      const SNAKE_START_LENGTH = 7;
       const SNAKE_START_POS_X = 50;
       const SNAKE_START_POS_Y = 50;
 
@@ -101,9 +116,9 @@
         canvas.setAttribute("width", width);
         canvas.setAttribute("height", height);
 
-        const background = document.getElementById('background');
-        background.setAttribute('width', width);
-        background.setAttribute('height', height);
+        const background = document.getElementById("background");
+        background.setAttribute("width", width);
+        background.setAttribute("height", height);
       }
 
       function getPosition(object) {
@@ -142,14 +157,43 @@
 
       async function start() {
         started = true;
+        moveCandy();
+        revealCandy();
         while (started) {
           await sleep(Math.floor(1000 / FPS));
           moveSnake();
+          checkCollision();
         }
       }
 
       function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      function revealCandy() {
+        const candy = document.getElementById("candy");
+        candy.setAttribute("display", "initial");
+      }
+
+      function moveCandy() {
+        const candy = document.getElementById("candy");
+        const [x, y] = getRandomPosition();
+        candy.setAttribute("display", "initial");
+        candy.setAttribute("cx", x);
+        candy.setAttribute("cy", y);
+      }
+
+      function getRandomPosition() {
+        const canvas = document.getElementById("canvas");
+        const canvasWidth = canvas.getAttribute("width");
+        const canvasHeight = canvas.getAttribute("height");
+        const x = generateRandomNumberBetween(0, canvasWidth);
+        const y = generateRandomNumberBetween(0, canvasHeight);
+        return [x, y];
+      }
+
+      function generateRandomNumberBetween(min, max) {
+        return Math.floor(Math.random() * max) + min;
       }
 
       function moveSnake() {
@@ -228,6 +272,33 @@
         const velocityX = targetX >= x ? speedX : -speedX;
         const velocityY = targetX >= x ? speedY : -speedY;
         return [velocityX, velocityY];
+      }
+
+      function checkCollision() {
+        checkCollisionWithCandy();
+      }
+
+      function checkCollisionWithCandy() {
+        const head = getHead();
+        const candy = document.getElementById("candy");
+        const distanceBetween = getDistanceBetween(head, candy);
+        const headR = Number(head.getAttribute("r"));
+        const candyR = Number(head.getAttribute("r"));
+        if (distanceBetween < headR + candyR) {
+          moveCandy();
+        }
+      }
+
+      function getDistanceBetween(circleA, circleB) {
+        const aX = circleA.getAttribute("cx");
+        const aY = circleA.getAttribute("cy");
+        const bX = circleB.getAttribute("cx");
+        const bY = circleB.getAttribute("cy");
+
+        const xDiff = Math.abs(aX - bX);
+        const yDiff = Math.abs(aY - bY);
+
+        return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
       }
     </script>
   </body>
