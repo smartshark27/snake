@@ -47,15 +47,14 @@
       const PART_RADIUS = 30;
       const SNAKE_FILL = "green";
       const SNAKE_START_LENGTH = 7;
-      const SNAKE_START_POS_X = 50;
-      const SNAKE_START_POS_Y = 50;
 
       var nextPartID = 0;
       const partIDs = [];
       var partIsMoving = [];
       const targets = [];
       const partTargetIndexes = [];
-      var started = false;
+      var gameRunning = false;
+      var gameOver = false;
 
       function handleLoad() {
         fitToScreen();
@@ -64,12 +63,13 @@
 
       function spawnSnake() {
         for (var i = 0; i < SNAKE_START_LENGTH; i++) {
-          const x = SNAKE_START_POS_X + i * 2 * PART_RADIUS;
-          spawnPart(x, SNAKE_START_POS_Y);
+          const x = window.innerWidth / 2 - i * 2 * PART_RADIUS;
+          const y = window.innerHeight / 2 + i * 2 * PART_RADIUS;
+          spawnPart(x, y);
         }
         const head = getHead();
-        const [x, y] = getPosition(head);
-        addTarget(x, y);
+        const [headX, headY] = getPosition(head);
+        addTarget(headX, headY);
       }
 
       function spawnPart(x, y) {
@@ -128,14 +128,15 @@
       }
 
       function handleMouseClick(event) {
+        if (gameOver) return;
         removeMessage();
         const head = getHead();
         const [headX, headY] = getPosition(head);
         updateLastTarget(headX, headY);
         addTarget(event.clientX, event.clientY);
         setAllPartsMoving();
-        if (!started) {
-          start();
+        if (!gameRunning) {
+          startGame();
         }
       }
 
@@ -155,11 +156,11 @@
         partIsMoving = partIsMoving.map(isMoving => true);
       }
 
-      async function start() {
-        started = true;
+      async function startGame() {
+        gameRunning = true;
         moveCandy();
         revealCandy();
-        while (started) {
+        while (gameRunning) {
           await sleep(Math.floor(1000 / FPS));
           moveSnake();
           checkCollision();
@@ -276,17 +277,23 @@
 
       function checkCollision() {
         checkCollisionWithCandy();
+        checkCollisionWithSnake();
       }
 
       function checkCollisionWithCandy() {
         const head = getHead();
         const candy = document.getElementById("candy");
-        const distanceBetween = getDistanceBetween(head, candy);
-        const headR = Number(head.getAttribute("r"));
-        const candyR = Number(head.getAttribute("r"));
-        if (distanceBetween < headR + candyR) {
+        const collision = haveCirclesCollided(head, candy);
+        if (collision) {
           moveCandy();
         }
+      }
+
+      function haveCirclesCollided(circleA, circleB) {
+        const distanceBetween = getDistanceBetween(circleA, circleB);
+        const aRadius = Number(circleA.getAttribute("r"));
+        const bRadius = Number(circleB.getAttribute("r"));
+        return distanceBetween < aRadius + bRadius;
       }
 
       function getDistanceBetween(circleA, circleB) {
@@ -297,8 +304,37 @@
 
         const xDiff = Math.abs(aX - bX);
         const yDiff = Math.abs(aY - bY);
-
         return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
+      }
+
+      function checkCollisionWithSnake() {
+        if (hasHeadCollidedWithBody()) {
+          stopGame();
+        }
+      }
+
+      function stopGame() {
+        gameRunning = false;
+        gameOver = true;
+        updateMessage("Snake has hit itself! Game over. Refresh page to restart");
+      }
+
+      function updateMessage(message) {
+        messageTextbox = document.getElementById("messageTextbox");
+        messageTextbox.textContent = message;
+        console.log(message);
+      }
+
+      function hasHeadCollidedWithBody() {
+        var collision = false;
+        const head = getHead();
+        partIDs.forEach(id => {
+          if (collision) return;
+          if (id === partIDs[0] || id === partIDs[1]) return;
+          const part = document.getElementById(id);
+          collision = haveCirclesCollided(head, part);
+        });
+        return collision;
       }
     </script>
   </body>
