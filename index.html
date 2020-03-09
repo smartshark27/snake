@@ -20,20 +20,8 @@
         fill="white"
         onclick="handleMouseClick(event)"
       ></rect>
-      <text
-        id="messageTextbox"
-        dominant-baseline="middle"
-        text-anchor="middle"
-        x="50%"
-        y="20%"
-        font-size="16"
-      >
-        Tap the screen
-      </text>
       <circle
         id="candy"
-        cx="-10"
-        cy="-10"
         r="20"
         fill="red"
         display="none"
@@ -44,9 +32,10 @@
     <script>
       const FPS = 60;
       const STEP_DISTANCE = 3;
-      const PART_RADIUS = 30;
+      const PART_RADIUS = 40;
+      const PART_SEPARATION = 50;
       const SNAKE_FILL = "green";
-      const SNAKE_START_LENGTH = 7;
+      const SNAKE_START_LENGTH = 3;
 
       var nextPartID = 0;
       const partIDs = [];
@@ -55,24 +44,28 @@
       const partTargetIndexes = [];
       var gameRunning = false;
       var gameOver = false;
+      var growing = false;
+      var growAt;
 
       function handleLoad() {
         fitToScreen();
         spawnSnake();
+        showMessage("Touch to start");
       }
 
       function spawnSnake() {
+        const y = window.innerHeight / 2;
         for (var i = 0; i < SNAKE_START_LENGTH; i++) {
-          const x = window.innerWidth / 2 - i * 2 * PART_RADIUS;
-          const y = window.innerHeight / 2 + i * 2 * PART_RADIUS;
-          spawnPart(x, y);
+          const x =
+            window.innerWidth / 2 - i * (2 * PART_RADIUS + PART_SEPARATION);
+          spawnPart(x, y, 0);
         }
         const head = getHead();
         const [headX, headY] = getPosition(head);
         addTarget(headX, headY);
       }
 
-      function spawnPart(x, y) {
+      function spawnPart(x, y, targetIndex) {
         const part = document.createElementNS(
           "http://www.w3.org/2000/svg",
           "circle"
@@ -88,7 +81,8 @@
 
         partIDs.push(id);
         partIsMoving.push(false);
-        partTargetIndexes.push(0);
+        partTargetIndexes.push(targetIndex);
+        return part;
       }
 
       function getNextPartID() {
@@ -141,8 +135,10 @@
       }
 
       function removeMessage() {
-        messageTextbox = document.getElementById("messageTextbox");
-        messageTextbox.textContent = "";
+        const messageTextbox = document.getElementById("messageTextbox");
+        if (messageTextbox) {
+          messageTextbox.remove();
+        }
       }
 
       function updateLastTarget(x, y) {
@@ -164,6 +160,7 @@
           await sleep(Math.floor(1000 / FPS));
           moveSnake();
           checkCollision();
+          checkGrow();
         }
       }
 
@@ -286,25 +283,63 @@
         const collision = haveCirclesCollided(head, candy);
         if (collision) {
           moveCandy();
+          startGrowing();
         }
       }
 
       function haveCirclesCollided(circleA, circleB) {
-        const distanceBetween = getDistanceBetween(circleA, circleB);
+        const aX = circleA.getAttribute("cx");
+        const aY = circleA.getAttribute("cy");
+        const bX = circleB.getAttribute("cx");
+        const bY = circleB.getAttribute("cy");
+        const distanceBetween = getDistanceBetween(aX, aY, bX, bY);
         const aRadius = Number(circleA.getAttribute("r"));
         const bRadius = Number(circleB.getAttribute("r"));
         return distanceBetween < aRadius + bRadius;
       }
 
-      function getDistanceBetween(circleA, circleB) {
-        const aX = circleA.getAttribute("cx");
-        const aY = circleA.getAttribute("cy");
-        const bX = circleB.getAttribute("cx");
-        const bY = circleB.getAttribute("cy");
-
+      function getDistanceBetween(aX, aY, bX, bY) {
         const xDiff = Math.abs(aX - bX);
         const yDiff = Math.abs(aY - bY);
         return Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
+      }
+
+      function startGrowing() {
+        growing = true;
+        const tail = getTail();
+        const [x, y] = getPosition(tail);
+        growAt = {
+          x: x,
+          y: y
+        };
+      }
+
+      function checkGrow() {
+        if (growing) {
+          tryGrow();
+        }
+      }
+
+      function tryGrow() {
+        const tail = getTail();
+        const [tailX, tailY] = getPosition(tail);
+        const distanceBetween = getDistanceBetween(
+          growAt.x,
+          growAt.y,
+          tailX,
+          tailY
+        );
+        if (distanceBetween >= 2 * PART_RADIUS + PART_SEPARATION) {
+          const tailTarget = partTargetIndexes[partIDs.length - 1];
+          spawnPart(growAt.x, growAt.y, tailTarget);
+          growing = false;
+          growAt = null;
+        }
+      }
+
+      function getTail() {
+        const id = partIDs[partIDs.length - 1];
+        return document.getElementById(id);
       }
 
       function checkCollisionWithSnake() {
@@ -316,13 +351,24 @@
       function stopGame() {
         gameRunning = false;
         gameOver = true;
-        updateMessage("Snake has hit itself! Game over. Refresh page to restart");
+        showMessage("Snake has hit itself! Game over. Refresh page to restart");
       }
 
-      function updateMessage(message) {
-        messageTextbox = document.getElementById("messageTextbox");
-        messageTextbox.textContent = message;
+      function showMessage(message) {
         console.log(message);
+        removeMessage();
+        const messageTextbox = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "text"
+        );
+        messageTextbox.setAttribute("id", "messageTextbox");
+        messageTextbox.setAttribute("dominant-baseline", "middle");
+        messageTextbox.setAttribute("text-anchor", "middle");
+        messageTextbox.setAttribute("x", "50%");
+        messageTextbox.setAttribute("y", "20%");
+        messageTextbox.setAttribute("font-size", "24");
+        document.getElementById("canvas").appendChild(messageTextbox);
+        messageTextbox.textContent = message;
       }
 
       function hasHeadCollidedWithBody() {
@@ -330,7 +376,7 @@
         const head = getHead();
         partIDs.forEach(id => {
           if (collision) return;
-          if (id === partIDs[0] || id === partIDs[1]) return;
+          if (id === partIDs[0]) return;
           const part = document.getElementById(id);
           collision = haveCirclesCollided(head, part);
         });
