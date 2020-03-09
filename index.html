@@ -9,7 +9,7 @@
     <svg
       id="canvas"
       style="touch-action: manipulation; position: absolute; left: 0; top: 0; font-family: 'Lucida Console', Monaco, monospace;"
-      onload="handleLoad()"
+      onload="handleLoad()" onclick="handleMouseClick(event)"
     >
       <rect
         id="background"
@@ -18,14 +18,12 @@
         width="1"
         height="1"
         fill="white"
-        onclick="handleMouseClick(event)"
       ></rect>
       <circle
         id="candy"
         r="20"
         fill="red"
         display="none"
-        onclick="handleMouseClick(event)"
       />
     </svg>
 
@@ -34,7 +32,8 @@
       const STEP_DISTANCE = 3;
       const PART_RADIUS = 40;
       const PART_SEPARATION = 50;
-      const SNAKE_FILL = "green";
+      const HEAD_FILL = "Green";
+      const BODY_FILL = "MediumSeaGreen";
       const SNAKE_START_LENGTH = 3;
 
       var nextPartID = 0;
@@ -76,7 +75,7 @@
         part.setAttribute("cx", x);
         part.setAttribute("cy", y);
         part.setAttribute("r", PART_RADIUS);
-        part.setAttribute("fill", SNAKE_FILL);
+        part.setAttribute("fill", (id == "part0") ? HEAD_FILL : BODY_FILL);
         document.getElementById("canvas").appendChild(part);
 
         partIDs.push(id);
