@@ -1,12 +1,14 @@
 function handleLoad() {
   fitToScreen();
-  spawnSnake();
-  showMessage("Touch to start");
+  prepareGame();
 }
 
 function handleMouseClick(event) {
-  if (gameOver) return;
-  removeMessage();
+  if (gameOver) {
+    resetGame();
+    return;
+  }
+  clearMessage();
   const head = getHead();
   const [headX, headY] = getCirclePosition(head);
   updateLastTarget(headX, headY);

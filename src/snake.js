@@ -1,10 +1,10 @@
 var growing = false;
 var growAt;
 var nextPartID = 0;
-const partIDs = [];
+var partIDs = [];
 var partIsMoving = [];
-const partTargetIndexes = [];
-const targets = [];
+var partTargetIndexes = [];
+var targets = [];
 
 function updateLastTarget(x, y) {
   targets[targets.length - 1] = {
@@ -16,8 +16,7 @@ function updateLastTarget(x, y) {
 function spawnSnake() {
   const y = window.innerHeight / 2;
   for (var i = 0; i < SNAKE_START_LENGTH; i++) {
-    const x =
-      window.innerWidth / 2 - i * (2 * PART_RADIUS + PART_SEPARATION);
+    const x = window.innerWidth / 2 - i * (2 * PART_RADIUS + PART_SEPARATION);
     spawnPart(x, y, 0);
   }
   const head = getHead();
@@ -26,17 +25,14 @@ function spawnSnake() {
 }
 
 function spawnPart(x, y, targetIndex) {
-  const part = document.createElementNS(
-    "http://www.w3.org/2000/svg",
-    "circle"
-  );
+  const part = document.createElementNS("http://www.w3.org/2000/svg", "circle");
   const id = getNextPartID();
 
   part.setAttribute("id", id);
   part.setAttribute("cx", x);
   part.setAttribute("cy", y);
   part.setAttribute("r", PART_RADIUS);
-  part.setAttribute("fill", (id == "part0") ? HEAD_FILL : BODY_FILL);
+  part.setAttribute("fill", id == "part0" ? HEAD_FILL : BODY_FILL);
   getElement("canvas").appendChild(part);
 
   partIDs.push(id);
@@ -121,12 +117,7 @@ function movePart(partIndex) {
   const targetIndex = partTargetIndexes[partIndex];
   const target = targets[targetIndex];
 
-  const [velocityX, velocityY] = calculateVelocity(
-    x,
-    y,
-    target.x,
-    target.y
-  );
+  const [velocityX, velocityY] = calculateVelocity(x, y, target.x, target.y);
   const newX = x + velocityX;
   const newY = y + velocityY;
   part.setAttribute("cx", newX);
@@ -143,6 +134,8 @@ function checkCollisionWithCandy() {
   const candy = getElement("candy");
   const collision = haveCirclesCollided(head, candy);
   if (collision) {
+    currentScore++;
+    setCurrentScore(currentScore);
     moveCandy();
     startGrowing();
   }
@@ -167,12 +160,7 @@ function checkGrow() {
 function tryGrow() {
   const tail = getTail();
   const [tailX, tailY] = getCirclePosition(tail);
-  const distanceBetween = getDistanceBetween(
-    growAt.x,
-    growAt.y,
-    tailX,
-    tailY
-  );
+  const distanceBetween = getDistanceBetween(growAt.x, growAt.y, tailX, tailY);
   if (distanceBetween >= 2 * PART_RADIUS + PART_SEPARATION) {
     const tailTarget = partTargetIndexes[partIDs.length - 1];
     spawnPart(growAt.x, growAt.y, tailTarget);
@@ -202,4 +190,19 @@ function hasHeadCollidedWithBody() {
     collision = haveCirclesCollided(head, part);
   });
   return collision;
+}
+
+function resetSnake() {
+  removeAllParts();
+  growing = false;
+  growAt = null;
+  nextPartID = 0;
+  partIDs = [];
+  partIsMoving = [];
+  partTargetIndexes = [];
+  targets = [];
+}
+
+function removeAllParts() {
+  partIDs.forEach(id => removeElement(id));
 }
